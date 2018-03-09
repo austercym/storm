@@ -18,26 +18,28 @@
  */
 package org.apache.storm.cassandra.client;
 
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.SocketOptions;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy.Builder;
-import com.datastax.driver.core.policies.LoadBalancingPolicy;
-import com.datastax.driver.core.policies.LoggingRetryPolicy;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
-import com.datastax.driver.core.policies.TokenAwarePolicy;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.storm.utils.Utils;
-import org.apache.storm.utils.ObjectReader;
-import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import com.datastax.driver.core.policies.FallthroughRetryPolicy;
+import com.datastax.driver.core.policies.LoadBalancingPolicy;
+import com.datastax.driver.core.policies.LoggingRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
+import com.datastax.driver.core.policies.RoundRobinPolicy;
+import com.datastax.driver.core.policies.TokenAwarePolicy;
+
 import com.google.common.base.Objects;
 
 import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.storm.utils.ObjectReader;
+import org.apache.storm.utils.Utils;
 
 /**
  * Configuration used by cassandra storm components.
@@ -63,6 +65,11 @@ public class CassandraConf implements Serializable {
     public static final String CASSANDRA_IDLE_TIMEOUT_SEC            = "cassandra.idle.timeout.sec";
     public static final String CASSANDRA_SOCKET_READ_TIMEOUT_MS      = "cassandra.socket.read.timeout.millis";
     public static final String CASSANDRA_SOCKET_CONNECT_TIMEOUT_MS   = "cassandra.socket.connect.timeout.millis";
+    public static final String CASSANDRA_SSL_SECURITY_PROTOCOL = "cassandra.ssl.security.protocol";
+    public static final String CASSANDRA_SSL_KEYSTORE_PATH = "cassandra.ssl.keystore.path";
+    public static final String CASSANDRA_SSL_KEYSTORE_PASSWORD = "cassandra.ssl.keystore.password";
+    public static final String CASSANDRA_SSL_TRUSTSTORE_PATH = "cassandra.ssl.truststore.path";
+    public static final String CASSANDRA_SSL_TRUSTSTORE_PASSWORD = "cassandra.ssl.truststore.password";
 
     /**
      * The authorized cassandra username.
@@ -136,6 +143,16 @@ public class CassandraConf implements Serializable {
      * The timeout for connect for socket options.
      */
     private long socketConnectTimeoutMillis;
+    
+    private String sslSecurityProtocol;
+
+    private String sslTruststorePath;
+
+    private String sslTruststorePassword;
+
+    private String sslKeystorePath;
+
+    private String sslKeystorePassword;
 
     /**
      * Creates a new {@link CassandraConf} instance.
@@ -170,6 +187,11 @@ public class CassandraConf implements Serializable {
         this.idleTimeoutSeconds = getInt(conf.get(CASSANDRA_IDLE_TIMEOUT_SEC), 60);
         this.socketReadTimeoutMillis = getLong(conf.get(CASSANDRA_SOCKET_READ_TIMEOUT_MS), (long)SocketOptions.DEFAULT_READ_TIMEOUT_MILLIS);
         this.socketConnectTimeoutMillis = getLong(conf.get(CASSANDRA_SOCKET_CONNECT_TIMEOUT_MS), (long)SocketOptions.DEFAULT_CONNECT_TIMEOUT_MILLIS);
+        this.sslSecurityProtocol = (String) Utils.get(conf, CASSANDRA_SSL_SECURITY_PROTOCOL, null);
+        this.sslKeystorePath = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PATH, null);
+        this.sslKeystorePassword = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PASSWORD, null);
+        this.sslTruststorePath = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PATH, null);
+        this.sslTruststorePassword = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PASSWORD, null);
     }
 
     public String getUsername() {
@@ -262,6 +284,10 @@ public class CassandraConf implements Serializable {
 
     public long getSocketConnectTimeoutMillis() {
         return socketConnectTimeoutMillis;
+    }
+    
+    public SslProps getSslProps() {
+        return new SslProps(sslSecurityProtocol, sslTruststorePath, sslTruststorePassword, sslKeystorePath, sslKeystorePassword);
     }
 
     private <T> T get(Map<String, Object> conf, String key) {
