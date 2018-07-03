@@ -20,11 +20,12 @@
     <parent>
         <artifactId>storm</artifactId>
         <groupId>org.apache.storm</groupId>
-        <version>1.1.3-SNAPSHOT</version>
+        <version>1.1.3</version>
         <relativePath>..</relativePath>
     </parent>
     <groupId>org.apache.storm</groupId>
     <artifactId>storm-core</artifactId>
+    <version>1.1.3-orwell</version>
     <packaging>jar</packaging>
     <name>Storm Core</name>
     <description>Storm Core Java API and Clojure implementation.</description>
@@ -723,7 +724,7 @@
                     <filters>
                         <!-- Several of these filters remove the .clj files from the shaded dependencies, even though only .clj files are in these jars.
                              The reason for this is a bit complex, but intentional.  During the build process all of the dependency .clj files are
-                             compiled down into .class files, and included in storm-core.jar.  The regular shade transformer handles these in 
+                             compiled down into .class files, and included in storm-core.jar.  The regular shade transformer handles these in
                              the majority of cases correctly.  However, the Clojure-Transformer does not shade everything correctly all the
                              time.  Instead of spending a lot of time to get the Clojure-Transformer to parse Clojure correctly we opted to remove
                              the .clj files from the uber jar. -->
