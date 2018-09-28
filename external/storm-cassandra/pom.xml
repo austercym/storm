@@ -40,7 +40,7 @@
         <commons-lang3.version>3.3</commons-lang3.version>
         <cassandra.driver.core.version>3.1.2</cassandra.driver.core.version>
         
-        <umbrella.secret.management.version>0.0.1-SNAPSHOT</umbrella.secret.management.version>
+        <umbrella.encryptor.version>0.0.1-SNAPSHOT</umbrella.encryptor.version>
     </properties>
 
     <developers>
@@ -99,8 +99,8 @@
         
         <dependency>
 			<groupId>com.orwellg.umbrella</groupId>
-			<artifactId>umbrella-secret-management</artifactId>
-			<version>${umbrella.secret.management.version}</version>
+			<artifactId>umbrella-encryptor</artifactId>
+			<version>${umbrella.encryptor.version}</version>
 		</dependency>
 
         <dependency>
