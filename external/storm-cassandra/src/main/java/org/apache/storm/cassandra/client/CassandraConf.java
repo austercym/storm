@@ -24,11 +24,15 @@ import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import com.datastax.driver.core.policies.FallthroughRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Objects;
+import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptor;
+import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory;
+import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory.SecretEncriptorTypes;
 
 import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.cassandra.client.SslProps;
 import org.apache.storm.utils.Utils;
 
@@ -52,6 +56,8 @@ public class CassandraConf implements Serializable {
     public static final String CASSANDRA_SSL_KEYSTORE_PASSWORD = "cassandra.ssl.keystore.password";
     public static final String CASSANDRA_SSL_TRUSTSTORE_PATH = "cassandra.ssl.truststore.path";
     public static final String CASSANDRA_SSL_TRUSTSTORE_PASSWORD = "cassandra.ssl.truststore.password";
+    
+    public static final String CASSANDRA_DECRYPT_FILE_PATH = "cassandra.decrypt.file.path";
 
     /**
      * The authorized cassandra username.
@@ -108,6 +114,10 @@ public class CassandraConf implements Serializable {
     private String sslKeystorePath;
 
     private String sslKeystorePassword;
+    
+    private String decryptFilePath;
+    
+    private SecretEncriptor<?> encryptor;
 
     /**
      * Creates a new {@link CassandraConf} instance.
@@ -138,6 +148,9 @@ public class CassandraConf implements Serializable {
         this.sslKeystorePassword = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PASSWORD, null);
         this.sslTruststorePath = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PATH, null);
         this.sslTruststorePassword = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PASSWORD, null);
+        
+        this.decryptFilePath = (String) Utils.get(conf, CASSANDRA_DECRYPT_FILE_PATH, null);
+        if (!StringUtils.isEmpty(this.decryptFilePath)) { this.encryptor = SecretEncriptorFactory.getSecretEncriptor(SecretEncriptorTypes.RSA_SECRET_ENCRIPTOR); }
     }
 
     public String getUsername() {
@@ -145,7 +158,15 @@ public class CassandraConf implements Serializable {
     }
 
     public String getPassword() {
-        return password;
+    	if (this.encryptor != null && !StringUtils.isEmpty(this.decryptFilePath)) { 
+    		try {
+    			return this.encryptor.decrypt(this.password, this.decryptFilePath); 
+    		} catch (Exception e) {
+    			throw new RuntimeException(e);
+    		}
+    	} else {
+    		return password;
+    	}
     }
 
     public String getKeyspace() {
@@ -187,7 +208,7 @@ public class CassandraConf implements Serializable {
     }
 
     public SslProps getSslProps() {
-        return new SslProps(sslSecurityProtocol, sslTruststorePath, sslTruststorePassword, sslKeystorePath, sslKeystorePassword);
+        return new SslProps(sslSecurityProtocol, sslTruststorePath, sslTruststorePassword, sslKeystorePath, sslKeystorePassword, decryptFilePath);
     }
 
     private <T> T get(Map<String, Object> conf, String key) {

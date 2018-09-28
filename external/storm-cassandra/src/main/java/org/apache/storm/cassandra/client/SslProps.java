@@ -18,6 +18,12 @@
  */
 package org.apache.storm.cassandra.client;
 
+import org.apache.commons.lang3.StringUtils;
+
+import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptor;
+import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory;
+import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory.SecretEncriptorTypes;
+
 /**
  * Properties needed for enabling SSL connection to Cassandra.<br/>
  * 
@@ -31,6 +37,9 @@ public class SslProps {
     private String truststorePassword;
     private String keystorePath;
     private String keystorePassword;
+  
+    private String decryptFilePath;
+    private SecretEncriptor<?> encryptor;
 
     public static final String PROTOCOL_SSL = "SSL";
 
@@ -39,6 +48,11 @@ public class SslProps {
      */
     public SslProps(String securityProtocol, String truststorePath, String truststorePassword, String keystorePath,
             String keystorePassword) {
+    	this(securityProtocol, truststorePath, truststorePassword, keystorePath, keystorePassword, null);
+    }
+    
+    public SslProps(String securityProtocol, String truststorePath, String truststorePassword, String keystorePath,
+            String keystorePassword, String decryptFilePath) {
         if (protocolIsSslEnabled(securityProtocol)
                 && (truststorePath == null || truststorePassword == null || keystorePath == null || keystorePassword == null)) {
             throw new IllegalStateException(
@@ -50,6 +64,9 @@ public class SslProps {
         this.truststorePassword = truststorePassword;
         this.keystorePath = keystorePath;
         this.keystorePassword = keystorePassword;
+        
+        this.decryptFilePath = decryptFilePath;
+        if (!StringUtils.isEmpty(this.decryptFilePath)) { this.encryptor = SecretEncriptorFactory.getSecretEncriptor(SecretEncriptorTypes.RSA_SECRET_ENCRIPTOR); }
     }
 
     public String getSecurityProtocol() {
@@ -61,7 +78,15 @@ public class SslProps {
     }
 
     public String getTruststorePassword() {
-        return truststorePassword;
+    	if (this.encryptor != null && !StringUtils.isEmpty(decryptFilePath)) {
+    		try {
+    			return encryptor.decrypt(truststorePassword, decryptFilePath);
+    		} catch (Exception e) {
+    			throw new RuntimeException(e);
+    		}
+    	} else {
+    		return truststorePassword;
+    	}
     }
 
     public String getKeystorePath() {
@@ -69,7 +94,15 @@ public class SslProps {
     }
 
     public String getKeystorePassword() {
-        return keystorePassword;
+    	if (this.encryptor != null && !StringUtils.isEmpty(decryptFilePath)) {
+    		try {
+    			return encryptor.decrypt(keystorePassword, decryptFilePath);
+    		} catch (Exception e) {
+    			throw new RuntimeException(e);
+    		}
+    	} else {
+    		return keystorePassword;
+    	}
     }
 
     /**
