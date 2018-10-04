@@ -40,7 +40,7 @@
         <commons-lang3.version>3.3</commons-lang3.version>
         <cassandra.driver.core.version>3.1.2</cassandra.driver.core.version>
         
-        <umbrella.encryptor.version>0.0.1-SNAPSHOT</umbrella.encryptor.version>
+        <umbrella.encryptor.version>0.0.1</umbrella.encryptor.version>
     </properties>
 
     <developers>
