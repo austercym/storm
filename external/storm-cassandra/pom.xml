@@ -27,7 +27,7 @@
 
     <packaging>jar</packaging>
     <artifactId>storm-cassandra</artifactId>
-    <version>1.1.4-orwellg</version>
+    <version>1.1.5-orwellg</version>
     <name>storm-cassandra</name>
     <description>Storm Bolts for Apache Cassandra</description>
 
@@ -40,7 +40,7 @@
         <commons-lang3.version>3.3</commons-lang3.version>
         <cassandra.driver.core.version>3.1.2</cassandra.driver.core.version>
         
-        <umbrella.encryptor.version>0.0.1</umbrella.encryptor.version>
+        <umbrella.commons.version>19.04.12-L-SNAPSHOT</umbrella.commons.version>
     </properties>
 
     <developers>
@@ -97,10 +97,16 @@
             <version>${commons-lang3.version}</version>
         </dependency>
         
-        <dependency>
+       <!--  <dependency>
 			<groupId>com.orwellg.umbrella</groupId>
 			<artifactId>umbrella-encryptor</artifactId>
 			<version>${umbrella.encryptor.version}</version>
+		</dependency> -->
+		
+		<dependency>
+			<groupId>com.orwellg.umbrella</groupId>
+			<artifactId>umbrella-commons</artifactId>
+			<version>${umbrella.commons.version}</version>
 		</dependency>
 
         <dependency>

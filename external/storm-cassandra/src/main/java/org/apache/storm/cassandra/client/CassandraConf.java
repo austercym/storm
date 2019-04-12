@@ -18,29 +18,45 @@
  */
 package org.apache.storm.cassandra.client;
 
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.storm.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import com.datastax.driver.core.policies.FallthroughRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Objects;
+import com.netflix.config.DynamicPropertyFactory;
+import com.orwellg.umbrella.commons.config.params.ScyllaParams;
+import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
+import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptor;
 import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory;
 import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory.SecretEncriptorTypes;
-
-import java.io.Serializable;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.storm.cassandra.client.SslProps;
-import org.apache.storm.utils.Utils;
 
 /**
  * Configuration used by cassandra storm components.
  */
 public class CassandraConf implements Serializable {
 
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	private final static Logger LOG = LoggerFactory.getLogger(CassandraConf.class);
+
+	public static final String ZK_HOST_LIST = "zookeeper.host.list";
+	
+	public static final String CASSANDRA_ZOOKEEPER_PATH     = "cassandra.zookeeper.path";
     public static final String CASSANDRA_USERNAME           = "cassandra.username";
     public static final String CASSANDRA_PASSWORD           = "cassandra.password";
     public static final String CASSANDRA_KEYSPACE           = "cassandra.keyspace";
@@ -133,24 +149,53 @@ public class CassandraConf implements Serializable {
      */
     public CassandraConf(Map<String, Object> conf) {
 
-        this.username = (String)Utils.get(conf, CASSANDRA_USERNAME, null);
-        this.password = (String)Utils.get(conf, CASSANDRA_PASSWORD, null);
+    	
+    	DynamicPropertyFactory dynamicFactory = null;
+    	if (conf.containsKey(CASSANDRA_ZOOKEEPER_PATH)) {   	
+    		String zookeeper = (String) Utils.get(conf, ZK_HOST_LIST, null);
+    		String path = (String) Utils.get(conf, CASSANDRA_ZOOKEEPER_PATH, null);    	
+    		try {
+    			LOG.info("Loading the properties using the zookeeper host {} and cassandra path {}.", zookeeper, path);
+    			ZookeeperUtils.init(zookeeper, Arrays.asList(new String[] {path}));
+    			ZookeeperUtils.addConfigurationSource(path);
+    			dynamicFactory = ZookeeperUtils.getDynamicPropertyFactory();
+    		} catch (Exception e) {
+    			LOG.error("Cannot load the properties using the zookeeper host {} and cassandra path {}. Message: {}", zookeeper, path, e.getMessage(), e);
+    			dynamicFactory = null;
+    		}
+    	}	
+    	
+    	if (dynamicFactory != null) {
+   			LOG.info("Loading scylla config from zookeeper");
+            this.username = dynamicFactory.getStringProperty(ScyllaParams.USER_PROP_NAME, null).get();
+	        this.password = dynamicFactory.getSecretProperty(ScyllaParams.PASSWORD_PROP_NAME, null).get();
+	        String lst = dynamicFactory.getStringProperty(Constants.SCYLLA_NODE_HOST_LIST, null).get();
+	        this.nodes    = (!StringUtils.isEmpty(lst)) ? lst.split(",") : null;    		
+            this.sslSecurityProtocol = dynamicFactory.getStringProperty(ScyllaParams.SSL_SECURITY_PROTOCOL_PROP_NAME, null).get();
+            this.sslKeystorePath     = dynamicFactory.getStringProperty(ScyllaParams.SSL_KEYSTORE_PATH_PROP_NAME, null).get();
+            this.sslKeystorePassword = dynamicFactory.getSecretProperty(ScyllaParams.SSL_KEYSTORE_PASSWORD_PROP_NAME, null).get();
+            this.sslTruststorePath   = dynamicFactory.getStringProperty(ScyllaParams.SSL_TRUSTSTORE_PATH_PROP_NAME, null).get();
+            this.sslTruststorePassword = dynamicFactory.getSecretProperty(ScyllaParams.SSL_TRUSTSTORE_PASSWORD_PROP_NAME, null).get();
+    	} else {
+   			LOG.info("Loading scylla config from configuration map");
+	        this.username = (String) Utils.get(conf, CASSANDRA_USERNAME, null);
+	        this.password = (String) Utils.get(conf, CASSANDRA_PASSWORD, null);
+	        this.nodes    = ((String) Utils.get(conf, CASSANDRA_NODES, "localhost")).split(",");	        
+	        this.sslSecurityProtocol = (String) Utils.get(conf, CASSANDRA_SSL_SECURITY_PROTOCOL, null);
+	        this.sslKeystorePath = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PATH, null);
+	        this.sslKeystorePassword = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PASSWORD, null);
+	        this.sslTruststorePath = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PATH, null);
+	        this.sslTruststorePassword = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PASSWORD, null);
+	        this.decryptFilePath = (String) Utils.get(conf, CASSANDRA_DECRYPT_FILE_PATH, null);
+	        if (!StringUtils.isEmpty(this.decryptFilePath)) { this.encryptor = SecretEncriptorFactory.getSecretEncriptor(SecretEncriptorTypes.RSA_SECRET_ENCRIPTOR); }
+    	}
         this.keyspace = get(conf, CASSANDRA_KEYSPACE);
-        this.consistencyLevel = ConsistencyLevel.valueOf((String)Utils.get(conf, CASSANDRA_CONSISTENCY_LEVEL, ConsistencyLevel.ONE.name()));
-        this.nodes    = ((String)Utils.get(conf, CASSANDRA_NODES, "localhost")).split(",");
+        this.consistencyLevel = ConsistencyLevel.valueOf((String) Utils.get(conf, CASSANDRA_CONSISTENCY_LEVEL, ConsistencyLevel.ONE.name()));
         this.batchSizeRows = Utils.getInt(conf.get(CASSANDRA_BATCH_SIZE_ROWS), 100);
         this.port = Utils.getInt(conf.get(CASSANDRA_PORT), 9042);
-        this.retryPolicyName = (String)Utils.get(conf, CASSANDRA_RETRY_POLICY, DefaultRetryPolicy.class.getSimpleName());
+        this.retryPolicyName = (String) Utils.get(conf, CASSANDRA_RETRY_POLICY, DefaultRetryPolicy.class.getSimpleName());
         this.reconnectionPolicyBaseMs = getLong(conf.get(CASSANDRA_RECONNECT_POLICY_BASE_MS), 100L);
         this.reconnectionPolicyMaxMs  = getLong(conf.get(CASSANDRA_RECONNECT_POLICY_MAX_MS), TimeUnit.MINUTES.toMillis(1));
-        this.sslSecurityProtocol = (String) Utils.get(conf, CASSANDRA_SSL_SECURITY_PROTOCOL, null);
-        this.sslKeystorePath = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PATH, null);
-        this.sslKeystorePassword = (String) Utils.get(conf, CASSANDRA_SSL_KEYSTORE_PASSWORD, null);
-        this.sslTruststorePath = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PATH, null);
-        this.sslTruststorePassword = (String) Utils.get(conf, CASSANDRA_SSL_TRUSTSTORE_PASSWORD, null);
-        
-        this.decryptFilePath = (String) Utils.get(conf, CASSANDRA_DECRYPT_FILE_PATH, null);
-        if (!StringUtils.isEmpty(this.decryptFilePath)) { this.encryptor = SecretEncriptorFactory.getSecretEncriptor(SecretEncriptorTypes.RSA_SECRET_ENCRIPTOR); }
     }
 
     public String getUsername() {
@@ -211,7 +256,8 @@ public class CassandraConf implements Serializable {
         return new SslProps(sslSecurityProtocol, sslTruststorePath, sslTruststorePassword, sslKeystorePath, sslKeystorePassword, decryptFilePath);
     }
 
-    private <T> T get(Map<String, Object> conf, String key) {
+    @SuppressWarnings("unchecked")
+	private <T> T get(Map<String, Object> conf, String key) {
         Object o = conf.get(key);
         if(o == null) {
             throw new IllegalArgumentException("No '" + key + "' value found in configuration!");
