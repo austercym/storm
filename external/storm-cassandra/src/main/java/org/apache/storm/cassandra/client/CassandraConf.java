@@ -52,7 +52,8 @@ public class CassandraConf implements Serializable {
 
 	public static final String ZK_HOST_LIST = "zookeeper.host.list";
 	
-	public static final String CASSANDRA_ZOOKEEPER_PATH     = "cassandra.zookeeper.path";
+	public static final String CASSANDRA_ZOOKEEPER_PATH       = "cassandra.zookeeper.path";
+	public static final String CASSANDRA_ZOOKEEPER_KEY_PREFIX = "cassandra.zookeeper.key.prefix";
     public static final String CASSANDRA_USERNAME           = "cassandra.username";
     public static final String CASSANDRA_PASSWORD           = "cassandra.password";
     public static final String CASSANDRA_KEYSPACE           = "cassandra.keyspace";
@@ -148,7 +149,7 @@ public class CassandraConf implements Serializable {
     	
     	ScyllaParams scyllaParams = null;
     	if (conf.containsKey(CASSANDRA_ZOOKEEPER_PATH)) {   	
-    		scyllaParams = new ScyllaParams((String) Utils.get(conf, ZK_HOST_LIST, null), (String) Utils.get(conf, CASSANDRA_ZOOKEEPER_PATH, null));
+    		scyllaParams = new ScyllaParams((String) Utils.get(conf, ZK_HOST_LIST, null), (String) Utils.get(conf, CASSANDRA_ZOOKEEPER_PATH, null), (String) Utils.get(conf, CASSANDRA_ZOOKEEPER_KEY_PREFIX, null));
     		try {
     			scyllaParams.start();
     			scyllaParams.loadParameters();
