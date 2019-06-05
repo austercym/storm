@@ -40,7 +40,7 @@
         <commons-lang3.version>3.3</commons-lang3.version>
         <cassandra.driver.core.version>3.1.2</cassandra.driver.core.version>
         
-        <umbrella.commons.version>19.04.16</umbrella.commons.version>
+        <umbrella.commons.version>v0.0.1.0</umbrella.commons.version>
     </properties>
     
       <distributionManagement>
