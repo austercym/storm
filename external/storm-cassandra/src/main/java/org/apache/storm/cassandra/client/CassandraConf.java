@@ -33,7 +33,6 @@ import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
 import com.datastax.driver.core.policies.FallthroughRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Objects;
-import com.netflix.config.DynamicPropertyFactory;
 import com.orwellg.umbrella.commons.config.params.ScyllaParams;
 import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptor;
 import com.orwellg.umbrella.secret.management.encriptor.SecretEncriptorFactory;
@@ -147,11 +146,15 @@ public class CassandraConf implements Serializable {
     public CassandraConf(Map<String, Object> conf) {
 
     	
-    	DynamicPropertyFactory dynamicFactory = null;
-    	
     	ScyllaParams scyllaParams = null;
     	if (conf.containsKey(CASSANDRA_ZOOKEEPER_PATH)) {   	
     		scyllaParams = new ScyllaParams((String) Utils.get(conf, ZK_HOST_LIST, null), (String) Utils.get(conf, CASSANDRA_ZOOKEEPER_PATH, null));
+    		try {
+    			scyllaParams.start();
+    			scyllaParams.loadParameters();
+    		} catch (Exception e) {
+    			LOG.error("Error trying to start the scylla params class. Message: {}", e.getMessage(), e);
+    		}
     	}	
     	
     	if (scyllaParams != null) {
