@@ -27,7 +27,7 @@
 
     <packaging>jar</packaging>
     <artifactId>storm-cassandra</artifactId>
-    <version>1.1.6-orwellg</version>
+    <version>1.1.7-orwellg</version>
     <name>storm-cassandra</name>
     <description>Storm Bolts for Apache Cassandra</description>
 
